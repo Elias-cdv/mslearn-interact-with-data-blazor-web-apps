@@ -6,6 +6,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 // Registrar el servicio de pizzas
 builder.Services.AddSingleton<PizzaService>();
+builder.Services.AddScoped<PizzaSalesState>();
 
 var app = builder.Build();
 
