@@ -46,9 +46,27 @@ form {
 
 .content {
     display: flex;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     z-index: 1;
     background-color: white;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 5rem);
+}
+
+footer {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    text-align: center;
+    background-color: white;
+}
+
+footer p {
+    margin-bottom: 0;
 }
 
 .main {
