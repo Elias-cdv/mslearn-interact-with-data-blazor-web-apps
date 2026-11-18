@@ -2,12 +2,14 @@
 @using System.Runtime.InteropServices
 @using BlazingPizza.Services
 @using BlazingPizza.Shared
+@implements IDisposable
 @inject OrderState OrderState
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 
 <div class="main">
-    <EditForm Model="Order.DeliveryAddress" OnSubmit="CheckSubmission">
+    <EditForm EditContext=editContext OnValidSubmit=PlaceOrder>
+        <DataAnnotationsValidator />
         <div class="checkout-cols">
             <div class="checkout-order-details">
                 <h4>Review order</h4>
@@ -15,45 +17,43 @@
             </div>
             <div class="checkout-delivery-address">
                 <h4>Deliver to...</h4>
-                @if (isError)
-                {
-                    <div class="alert alert-danger">Please enter a name and address.</div>
-                }
                 <AddressEditor Address="Order.DeliveryAddress" />  
             </div>   
         </div>
 
-        <button class="checkout-button btn btn-warning" type="submit" disabled="@isSubmitting">
+        <button class="checkout-button btn btn-warning" type="Submit" disabled=@isError>
             Place order
         </button>
     </EditForm>
-
 </div>
 
 @code {
-    private bool isSubmitting;
-    private bool isError;
+    private EditContext editContext;
+    private bool isError = true;
 
     private Order Order => OrderState.Order;
 
-    private async Task CheckSubmission(EditContext editContext)
+    protected override void OnInitialized()
     {
-        isSubmitting = true;
-        var model = editContext.Model as Address;
-        isError = string.IsNullOrWhiteSpace(model?.Name)
-            || string.IsNullOrWhiteSpace(model?.Line1)
-            || string.IsNullOrWhiteSpace(model?.PostalCode);
-        if (!isError)
-        {
-            await PlaceOrder();
-        }
-        isSubmitting = false;
+        editContext = new(Order.DeliveryAddress);
+        editContext.OnFieldChanged += HandleFieldChanged;
+        isError = !editContext.Validate();
     }
 
-    private async Task PlaceOrder()
+    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
     {
-        var response = await HttpClient.PostAsJsonAsync($"{NavigationManager.BaseUri}orders", OrderState.Order);
-        response.EnsureSuccessStatusCode();
+        isError = !editContext.Validate();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        editContext.OnFieldChanged -= HandleFieldChanged;
+    }
+
+    async Task PlaceOrder()
+    {
+        var response = await HttpClient.PostAsJsonAsync(NavigationManager.BaseUri + "orders", OrderState.Order);
         var newOrderId = await response.Content.ReadFromJsonAsync<int>();
         OrderState.ResetOrder();
         NavigationManager.NavigateTo($"myorders/{newOrderId}");
